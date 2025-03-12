@@ -1,0 +1,756 @@
+ <!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Kral'ın Horoz Dövüş Çiftliği </title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #35477d;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #6c5b7b;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background-color: #c06c84;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .progress-container {
+      width: 100%;
+      height: 20px;
+      background-color: #f1f1f1;
+      border-radius: 5px;
+      margin-top: 5px;
+    }
+    .progress-bar {
+      height: 20px;
+      background-color: #4CAF50;
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.5s;
+    }
+    .custom-file-upload {
+      display: inline-block;
+      padding: 10px 15px;
+      cursor: pointer;
+      background-color: #f67280;
+      color: white;
+      border-radius: 5px;
+      margin: 5px;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    button {
+      background-color: #4CAF50;
+      color: black;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #336600;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .sound-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 24px;
+    }
+    .race-container {
+      margin-top: 30px;
+    }
+    .race-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    /* Pist genişliği büyütüldü */
+    .track {
+      width: 1300px; 
+      margin: 0 auto;
+      background-color: #8bc34a;
+      position: relative;
+      border-radius: 5px;
+      border: 3px solid #336600;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .finish-line {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 10px;
+      height: 100%;
+      background: repeating-linear-gradient(
+          45deg,
+          #000,
+          #000 10px,
+          #fff 10px,
+          #fff 20px
+      );
+      z-index: 1;
+    }
+    .lane {
+      border-bottom: 2px dashed white;
+      position: relative;
+    }
+    .lane:last-child {
+      border-bottom: none;
+    }
+    .horse {
+      position: absolute;
+      left: 0;
+      width: 120px; 
+      height: 90px;
+      transition: left 0.1s linear;
+      z-index: 2;
+    }
+    .horse-name {
+      position: absolute;
+      left: 5px;
+      top: 5px;
+      background-color: rgba(255, 255, 255, 0.7);
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 3;
+    }
+    .results {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f1f8e9;
+      border-radius: 5px;
+    }
+    .leaderboard {
+      text-align: left;
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .leaderboard th, .leaderboard td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    .leaderboard th {
+      background-color: #336600;
+      color: white;
+    }
+    .winner {
+      font-size: 20px;
+      color: #d50000;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Pentagon Mükremin'in Horoz Dövüş Çiftliği</h1>
+
+  <div>
+    <label class="custom-file-upload">
+      <input type="file" id="excelFile" accept=".xlsx, .xls, .csv">
+      Excel'den At Listesi
+    </label>
+    <span id="fileNameDisplay"></span>
+
+    <label class="custom-file-upload">
+      <input type="file" id="horseGif" accept=".gif">
+      At GIF
+    </label>
+    <span id="gifNameDisplay"></span>
+
+    <div class="progress-container" id="progressContainer" style="display:none;">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:10px;">
+    
+    <button id="startHeatsBtn" disabled>Sifonu Çek</button>
+    
+    <button id="startCurrentHeatBtn" disabled>Bu Yarışı Başlat</button>
+   
+    <button id="nextHeatBtn" disabled>Sonraki Yarış</button>
+    
+    <button id="startFinalBtn" disabled>Finali Başlat</button>
+  </div>
+
+  <div id="heatsContainer" class="race-container"></div>
+
+  <div id="finalContainer" class="race-container" style="display:none;">
+    <div class="race-title">Büyük Final</div>
+    <div id="finalTrack" class="track"></div>
+    <div class="results" id="finalResults" style="display:none;">
+      <div id="finalWinner" class="winner"></div>
+      <table class="leaderboard" id="finalLeaderboard">
+        <thead>
+          <tr>
+            <th>Sıra</th>
+            <th>At</th>
+            <th>Süre</th>
+          </tr>
+        </thead>
+        <tbody id="finalLeaderboardBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sound-toggle" id="soundToggle">🔊</div>
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- XLSX Kütüphanesi -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+/***
+ *                 GLOBAL DEĞİŞKENLER
+ **/
+let allHorses = [];
+let horseGifURL = null;
+let soundEnabled = true;
+
+const gallop = new Audio();
+gallop.src = "data:audio/mp3;base64,SUQzBAAAA...";
+const cheerSound = new Audio();
+cheerSound.src = "data:audio/mp3;base64,SUQzBAAAA...";
+
+let currentHeatIndex = 0;
+let heatWinners = [];
+let chunkedHorses = [];
+
+let currentHorsesInHeat = []; 
+let raceInterval = null;      
+let startTime = 0;         
+
+const confettiCanvas = document.getElementById('confetti-canvas');
+const confettiCtx = confettiCanvas.getContext('2d');
+const confettiPieces = [];
+
+/****
+ *              DOM ELEMENTLERİ
+ ***/
+const excelFileInput = document.getElementById('excelFile');
+const horseGifInput = document.getElementById('horseGif');
+const startHeatsBtn = document.getElementById('startHeatsBtn');
+const startCurrentHeatBtn = document.getElementById('startCurrentHeatBtn');
+const nextHeatBtn = document.getElementById('nextHeatBtn');
+const startFinalBtn = document.getElementById('startFinalBtn');
+
+const fileNameDisplay = document.getElementById('fileNameDisplay');
+const gifNameDisplay = document.getElementById('gifNameDisplay');
+const progressContainer = document.getElementById('progressContainer');
+const progressBar = document.getElementById('progressBar');
+const soundToggle = document.getElementById('soundToggle');
+
+const heatsContainer = document.getElementById('heatsContainer');
+const finalContainer = document.getElementById('finalContainer');
+const finalTrack = document.getElementById('finalTrack');
+const finalResults = document.getElementById('finalResults');
+const finalWinnerDiv = document.getElementById('finalWinner');
+const finalLeaderboardBody = document.getElementById('finalLeaderboardBody');
+
+/****
+ *              CANVAS AYARLARI
+ ***/
+confettiCanvas.width = window.innerWidth;
+confettiCanvas.height = window.innerHeight;
+window.addEventListener('resize', () => {
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+});
+
+/***
+ *        EVENT LİSTENER'LAR
+ *****/
+excelFileInput.addEventListener('change', handleExcelFile);
+horseGifInput.addEventListener('change', handleHorseGif);
+startHeatsBtn.addEventListener('click', prepareHeats);
+startCurrentHeatBtn.addEventListener('click', startHeatRace);
+nextHeatBtn.addEventListener('click', goNextHeat);
+startFinalBtn.addEventListener('click', startFinalRace);
+soundToggle.addEventListener('click', toggleSound);
+
+/***
+ * 1) EXCEL DOSYASINI OKUMA
+ ****/
+function handleExcelFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  fileNameDisplay.textContent = file.name;
+  progressContainer.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    progressBar.style.width = '50%';
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+      allHorses = [];
+      jsonData.forEach(row => {
+        if (row.length > 0 && row[0] && typeof row[0] === 'string') {
+          allHorses.push({
+            name: row[0].trim(),
+            position: 0,
+            finished: false,
+            finishTime: null,
+            multiplier: 1,     
+            speed: 0,           
+            lastSpeedChange: 0  
+          });
+        }
+      });
+
+      progressBar.style.width = '100%';
+      setTimeout(() => {
+        progressContainer.style.display = 'none';
+      }, 1000);
+
+      if (allHorses.length > 0 && horseGifURL) {
+        startHeatsBtn.disabled = false;
+      }
+    } catch (err) {
+      alert('Dosya okunurken hata oluştu: ' + err.message);
+      progressContainer.style.display = 'none';
+    }
+  };
+  reader.onerror = function() {
+    alert('Dosya okunamadı!');
+    progressContainer.style.display = 'none';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function handleHorseGif(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  gifNameDisplay.textContent = file.name;
+  if (horseGifURL) {
+    URL.revokeObjectURL(horseGifURL);
+  }
+  horseGifURL = URL.createObjectURL(file);
+
+  if (allHorses.length > 0 && horseGifURL) {
+    startHeatsBtn.disabled = false;
+  }
+}
+
+/***
+ * GRUP HAZIRLA
+ *******/
+function prepareHeats() {
+  
+  chunkedHorses = chunkArray(allHorses, 6);
+  currentHeatIndex = 0;
+  heatWinners = [];
+  heatsContainer.innerHTML = '';
+
+  finalContainer.style.display = 'none';
+  finalResults.style.display = 'none';
+  finalLeaderboardBody.innerHTML = '';
+
+  
+  if (chunkedHorses.length === 0) {
+    alert('Yarışacak at yok!');
+    return;
+  }
+
+  
+  setupHeat(currentHeatIndex);
+
+  
+  startHeatsBtn.disabled = true;        
+  startCurrentHeatBtn.disabled = false; 
+  nextHeatBtn.disabled = true;          
+  startFinalBtn.disabled = true;        
+}
+
+/***
+ * SEÇİLEN HEAT İÇİN PİSTİ OLUŞTURMA
+ **/
+function setupHeat(index) {
+  heatsContainer.innerHTML = ''; 
+
+  const heatDiv = document.createElement('div');
+  heatDiv.className = 'track';
+
+  const heatTitle = document.createElement('div');
+  heatTitle.className = 'race-title';
+  heatTitle.textContent = `Yarış ${index + 1}`;
+  heatsContainer.appendChild(heatTitle);
+
+  const finishLine = document.createElement('div');
+  finishLine.className = 'finish-line';
+  heatDiv.appendChild(finishLine);
+
+  
+  currentHorsesInHeat = chunkedHorses[index];
+
+  
+  const laneHeight = 120;
+  heatDiv.style.height = (laneHeight * currentHorsesInHeat.length) + 'px';
+
+  
+  currentHorsesInHeat.forEach((horse, i) => {
+    
+    horse.position = 0;
+    horse.finished = false;
+    horse.finishTime = null;
+    horse.lastSpeedChange = Date.now();
+
+    const lane = document.createElement('div');
+    lane.className = 'lane';
+    lane.style.height = laneHeight + 'px';
+    heatDiv.appendChild(lane);
+
+    const horseImg = document.createElement('img');
+    horseImg.className = 'horse';
+    horseImg.src = horseGifURL;
+   
+    horseImg.style.top = ((laneHeight - 90) / 2) + 'px'; 
+    horseImg.id = `heat${index}-horse${i}`;
+    lane.appendChild(horseImg);
+
+    const horseName = document.createElement('div');
+    horseName.className = 'horse-name';
+    horseName.textContent = horse.name; 
+    lane.appendChild(horseName);
+  });
+
+  heatsContainer.appendChild(heatDiv);
+}
+
+/**
+ * BU HEAT'İ BAŞLAT
+ ****/
+function startHeatRace() {
+  
+  if (raceInterval) clearInterval(raceInterval);
+
+  if (soundEnabled) {
+    gallop.loop = true;
+    gallop.play();
+  }
+  startTime = Date.now();
+
+  raceInterval = setInterval(() => {
+    let allFinished = true;
+
+    currentHorsesInHeat.forEach((horse, i) => {
+      if (!horse.finished) {
+        allFinished = false;
+
+       
+        const now = Date.now();
+        if (now - horse.lastSpeedChange >= 1000) {
+         
+          horse.multiplier = Math.floor(Math.random() * 3) + 1; 
+         
+          let baseSpeed = Math.random() * 1.5 + 0.5; 
+         
+          horse.speed = baseSpeed * horse.multiplier;
+
+          horse.lastSpeedChange = now;
+        }
+
+        
+        horse.position += horse.speed;
+
+        
+        const horseElem = document.getElementById(`heat${currentHeatIndex}-horse${i}`);
+        if (horseElem) {
+          horseElem.style.left = horse.position + 'px';
+        }
+
+        
+        const trackDiv = document.querySelector('.track');
+        const trackWidth = trackDiv.clientWidth - 100;
+        if (horse.position >= trackWidth) {
+          horse.finished = true;
+          horse.finishTime = Date.now() - startTime;
+          if (horseElem) {
+            horseElem.style.left = trackWidth + 'px';
+          }
+        }
+      }
+    });
+
+    if (allFinished) {
+      clearInterval(raceInterval);
+      if (soundEnabled) {
+        gallop.pause();
+        gallop.currentTime = 0;
+        cheerSound.play();
+      }
+
+      
+      currentHorsesInHeat.sort((a, b) => a.finishTime - b.finishTime);
+
+      
+      const winner = currentHorsesInHeat[0];
+      heatWinners.push(winner);
+
+     
+      startCurrentHeatBtn.disabled = true; 
+      if (currentHeatIndex < chunkedHorses.length - 1) {
+        
+        nextHeatBtn.disabled = false;   
+      } else {
+        
+        startFinalBtn.disabled = false;
+      }
+    }
+  }, 50);
+
+ 
+  startCurrentHeatBtn.disabled = true;
+}
+
+/**
+ * SONRAKİ YARIŞ (Butona basılınca)
+ ***/
+function goNextHeat() {
+  currentHeatIndex++;
+  if (currentHeatIndex < chunkedHorses.length) {
+    setupHeat(currentHeatIndex);
+    startCurrentHeatBtn.disabled = false; 
+    nextHeatBtn.disabled = true;          
+  }
+}
+
+/**
+ *FİNAL YARIŞINI BAŞLAT
+ ****/
+function startFinalRace() {
+  finalContainer.style.display = 'block';
+  finalTrack.innerHTML = '';
+  finalResults.style.display = 'none';
+
+  const finalHorses = heatWinners;
+  if (finalHorses.length === 0) {
+    alert('Finale katılacak at yok!');
+    return;
+  }
+
+  const laneHeight = 120;
+  finalTrack.style.height = (laneHeight * finalHorses.length) + 'px';
+
+  const finishLine = document.createElement('div');
+  finishLine.className = 'finish-line';
+  finalTrack.appendChild(finishLine);
+
+  
+  finalHorses.forEach((horse, i) => {
+    horse.position = 0;
+    horse.finished = false;
+    horse.finishTime = null;
+    horse.lastSpeedChange = Date.now();
+
+    const lane = document.createElement('div');
+    lane.className = 'lane';
+    lane.style.height = laneHeight + 'px';
+    finalTrack.appendChild(lane);
+
+    const horseImg = document.createElement('img');
+    horseImg.className = 'horse';
+    horseImg.src = horseGifURL;
+    horseImg.style.top = ((laneHeight - 90) / 2) + 'px';
+    horseImg.id = `final-horse${i}`;
+    lane.appendChild(horseImg);
+
+    const horseName = document.createElement('div');
+    horseName.className = 'horse-name';
+    horseName.textContent = horse.name; 
+    lane.appendChild(horseName);
+  });
+
+  // Final yarışı
+  if (raceInterval) clearInterval(raceInterval);
+
+  if (soundEnabled) {
+    gallop.loop = true;
+    gallop.play();
+  }
+  startTime = Date.now();
+
+  raceInterval = setInterval(() => {
+    let allFinished = true;
+
+    finalHorses.forEach((horse, i) => {
+      if (!horse.finished) {
+        allFinished = false;
+
+        const now = Date.now();
+        if (now - horse.lastSpeedChange >= 1000) {
+          
+          horse.multiplier = Math.floor(Math.random() * 3) + 1;
+          let baseSpeed = Math.random() * 1.5 + 0.5;
+          horse.speed = baseSpeed * horse.multiplier;
+          horse.lastSpeedChange = now;
+        }
+
+        horse.position += horse.speed;
+
+        const horseElem = document.getElementById(`final-horse${i}`);
+        if (horseElem) {
+          horseElem.style.left = horse.position + 'px';
+        }
+
+        const trackWidth = finalTrack.clientWidth - 100;
+        if (horse.position >= trackWidth) {
+          horse.finished = true;
+          horse.finishTime = Date.now() - startTime;
+          if (horseElem) {
+            horseElem.style.left = trackWidth + 'px';
+          }
+        }
+      }
+    });
+
+    if (allFinished) {
+      clearInterval(raceInterval);
+      if (soundEnabled) {
+        gallop.pause();
+        gallop.currentTime = 0;
+        cheerSound.play();
+      }
+
+      finalHorses.sort((a, b) => a.finishTime - b.finishTime);
+      displayFinalResults(finalHorses);
+      createConfetti();
+
+      
+      startFinalBtn.disabled = true;
+    }
+  }, 50);
+
+  startFinalBtn.disabled = true;
+}
+
+/**
+ *FİNAL SONUÇLARI
+ ***/
+function displayFinalResults(finalHorses) {
+  finalResults.style.display = 'block';
+  finalLeaderboardBody.innerHTML = '';
+
+  if (finalHorses.length > 0) {
+    finalWinnerDiv.textContent = 'Narkozun götü dehleyecek kişi : ' + finalHorses[0].name;
+  }
+
+  finalHorses.forEach((horse, i) => {
+    const tr = document.createElement('tr');
+    const tdPos = document.createElement('td');
+    tdPos.textContent = i + 1;
+
+    const tdName = document.createElement('td');
+    tdName.textContent = horse.name;
+
+    const tdTime = document.createElement('td');
+    tdTime.textContent = (horse.finishTime / 1000).toFixed(2) + ' sn';
+
+    tr.appendChild(tdPos);
+    tr.appendChild(tdName);
+    tr.appendChild(tdTime);
+    finalLeaderboardBody.appendChild(tr);
+  });
+}
+
+/**
+ *  SES AÇ/KAPA
+ *****/
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+}
+
+
+function chunkArray(array, size) {
+  const result = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
+
+function createConfetti() {
+  for (let i = 0; i < 200; i++) {
+    confettiPieces.push({
+      x: Math.random() * confettiCanvas.width,
+      y: -20 - Math.random() * 100,
+      size: Math.random() * 5 + 5,
+      color: getRandomColor(),
+      speed: Math.random() * 3 + 2,
+      angle: Math.random() * 6.28
+    });
+  }
+  animateConfetti();
+}
+
+function animateConfetti() {
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  confettiPieces.forEach((piece, index) => {
+    piece.y += piece.speed;
+    piece.x += Math.sin(piece.angle) * 2;
+    piece.angle += 0.01;
+
+    confettiCtx.fillStyle = piece.color;
+    confettiCtx.fillRect(piece.x, piece.y, piece.size, piece.size);
+
+    if (piece.y > confettiCanvas.height) {
+      confettiPieces.splice(index, 1);
+    }
+  });
+  if (confettiPieces.length > 0) {
+    requestAnimationFrame(animateConfetti);
+  }
+}
+
+function getRandomColor() {
+  const colors = [
+    '#f44336','#e91e63','#9c27b0','#673ab7','#3f51b5',
+    '#2196f3','#03a9f4','#00bcd4','#009688','#4caf50',
+    '#8bc34a','#cddc39','#ffeb3b','#ffc107','#ff9800','#ff5722'
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+</script>
+</body>
+</html>
