@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Çark Oyunu</title>
+  
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      body {
+        background-color: black;
+        color: white;
+        text-align: center;
+        font-family: 'Poppins', sans-serif;
+      }
+
+      #wheelCanvas {
+        background-color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Çark Oyunu</h1>
+    <input type="file" id="csvFile" accept=".csv">
+    <button id="loadCSV">CSV Yükle</button>
+    <br><br>
+    <canvas id="wheelCanvas" width="500" height="500"></canvas>
+    <br><br>
+    <button id="spinButton" disabled>Çarkı Döndür</button>
+    <p id="result"></p>
+
+    <script>
+      let names = [];
+      let currentRotation = 0;
+      const canvas = document.getElementById('wheelCanvas');
+      const ctx = canvas.getContext('2d');
+      const spinButton = document.getElementById('spinButton');
+      const resultP = document.getElementById('result');
+      
+    
+      const colors = ["#DA0D2A", "#00A428", "#3974EB", "#F1BA10"];
+
+
+      function drawWheel() {
+        const num = names.length;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = Math.min(centerX, centerY) - 20;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let startAngle = 0;
+        for (let i = 0; i < num; i++) {
+          let sliceAngle = 2 * Math.PI / num;
+          let endAngle = startAngle + sliceAngle;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.arc(centerX, centerY, radius, startAngle + currentRotation, endAngle + currentRotation);
+          ctx.closePath();
+
+          ctx.fillStyle = colors[i % colors.length];
+          ctx.fill();
+
+
+          ctx.save();
+          ctx.translate(centerX, centerY);
+          let textAngle = startAngle + sliceAngle/2 + currentRotation;
+          ctx.rotate(textAngle);
+          ctx.textAlign = "right";
+          ctx.fillStyle = "white";
+          ctx.font = "16px 'Poppins', sans-serif";
+          ctx.fillText(names[i], radius - 10, 0);
+          ctx.restore();
+
+          startAngle += sliceAngle;
+        }
+
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY - radius - 10);
+        ctx.lineTo(centerX - 10, centerY - radius + 10);
+        ctx.lineTo(centerX + 10, centerY - radius + 10);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+
+      function readCSV(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const text = e.target.result;
+          const lines = text.split(/\r?\n/);
+          names = [];
+          for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (line) {
+              let parts = line.split(",");
+              if (parts.length > 0) {
+                let name = parts[0].trim();
+                if (name !== "") {
+                  names.push(name);
+                }
+              }
+            }
+          }
+          if (names.length > 0) {
+            spinButton.disabled = false;
+            drawWheel();
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      document.getElementById('loadCSV').addEventListener('click', function() {
+        const fileInput = document.getElementById('csvFile');
+        if (fileInput.files.length > 0) {
+          readCSV(fileInput.files[0]);
+        } else {
+          alert("Lütfen bir CSV dosyası seçin.");
+        }
+      });
+
+
+      function easeOut(t) {
+        return t * (2 - t);
+      }
+
+   
+      function spinWheel() {
+        if (names.length === 0) {
+          resultP.innerText = "Tüm isimler seçildi!";
+          spinButton.disabled = true;
+          return;
+        }
+        spinButton.disabled = true;
+        resultP.innerText = "";
+
+        const num = names.length;
+    
+        const winningIndex = Math.floor(Math.random() * num);
+        const sliceAngle = 2 * Math.PI / num;
+       
+        const winningAngle = (3 * Math.PI/2) - (winningIndex * sliceAngle) - (sliceAngle / 2);
+
+        const startRotation = currentRotation;
+        let currentMod = startRotation % (2 * Math.PI);
+        if (currentMod < 0) currentMod += 2 * Math.PI;
+        let offset = winningAngle - currentMod;
+        if (offset < 0) offset += 2 * Math.PI;
+        const rotations = 5;
+        const targetRotation = startRotation + rotations * 2 * Math.PI + offset;
+
+        const duration = 7500; 
+        const startTime = performance.now();
+
+        function animate(now) {
+          let elapsed = now - startTime;
+          let t = elapsed / duration;
+          if (t > 1) t = 1;
+          let easedT = easeOut(t);
+          currentRotation = startRotation + (targetRotation - startRotation) * easedT;
+          drawWheel();
+          if (t < 1) {
+            requestAnimationFrame(animate);
+          } else {
+  
+            let winner = names[winningIndex];
+            resultP.innerText = "Kazanan: " + winner;
+   
+            names.splice(winningIndex, 1);
+            currentRotation = currentRotation % (2 * Math.PI);
+            drawWheel();
+            spinButton.disabled = false;
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+
+      spinButton.addEventListener('click', spinWheel);
+    </script>
+  </body>
+</html>
